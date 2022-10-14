@@ -3,32 +3,30 @@ package edu.pucmm.eict.javalincsrf.security.csrf.plugin;
 import edu.pucmm.eict.javalincsrf.security.csrf.CsrfFilter;
 import edu.pucmm.eict.javalincsrf.security.csrf.CsrfRepository;
 import io.javalin.Javalin;
-import io.javalin.http.HandlerType;
 import io.javalin.plugin.Plugin;
 import org.jetbrains.annotations.NotNull;
 
-import java.util.List;
-
 public class CsrfPlugin implements Plugin {
 
-    private final CsrfRepository csrfRepository;
     private final CsrfFilter csrfFilter;
+    private final CsrfPluginConfig config;
 
     public CsrfPlugin() {
-        this.csrfRepository = new CsrfRepository();
-        this.csrfFilter = new CsrfFilter(csrfRepository);
+        this.config = new CsrfPluginConfig();
+        this.csrfFilter = new CsrfFilter(new CsrfRepository(), CsrfReaderFactory.get(config.getCsrfReaderType()));
     }
 
     @Override
     public void apply(@NotNull Javalin javalin) {
         javalin.before(ctx -> {
-            var safeMethods = List.of(HandlerType.GET, HandlerType.OPTIONS, HandlerType.HEAD);
-            var changingStateMethods = List.of(HandlerType.POST, HandlerType.DELETE, HandlerType.PUT, HandlerType.PATCH);
-            if (safeMethods.contains(ctx.method())) {
+            var safeMethods = config.getSafeMethods();
+            if (safeMethods.contains(ctx.req().getMethod())) {
                 csrfFilter.generateToken(ctx);
+                return;
             }
 
-            if (changingStateMethods.contains(ctx.method())) {
+            var changingStateMethods = config.getStateChangingMethods();
+            if (changingStateMethods.contains(ctx.req().getMethod())) {
                 csrfFilter.validateToken(ctx);
             }
         });

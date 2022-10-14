@@ -1,14 +1,15 @@
 package edu.pucmm.eict.javalincsrf.security.csrf;
 
 import io.javalin.http.Context;
-import io.javalin.http.HttpStatus;
 
 public class CsrfFilter {
 
     private final CsrfRepository csrfRepository;
+    private final CsrfReader csrfReader;
 
-    public CsrfFilter(CsrfRepository csrfRepository) {
+    public CsrfFilter(CsrfRepository csrfRepository, CsrfReader csrfReader) {
         this.csrfRepository = csrfRepository;
+        this.csrfReader = csrfReader;
     }
 
     /**
@@ -30,19 +31,13 @@ public class CsrfFilter {
      */
     public void validateToken(Context ctx) {
         var validToken = csrfRepository.get(ctx);
-        var sentToken = ctx.formParam("_csrf");
-        if ((sentToken == null) || !sentToken.contentEquals(validToken)) {
+        var sentToken = csrfReader.retrieveToken(ctx);
+        if (sentToken == null || sentToken.isBlank()) {
             throw new InvalidCsrfTokenException("An Invalid CSRF was sent.");
         }
-    }
 
-    /**
-     * Will handle the response when the exception InvalidCsrfTokenException is thrown in a Handler.
-     *
-     * @param ex  InvalidCsrfTokenException
-     * @param ctx Javalin's Context
-     */
-    public void handleInvalidCsrfTokenException(InvalidCsrfTokenException ex, Context ctx) {
-        ctx.status(HttpStatus.FORBIDDEN).result(ex.getMessage());
+        if(!sentToken.equalsIgnoreCase(validToken)) {
+            throw new InvalidCsrfTokenException("An Invalid CSRF was sent.");
+        }
     }
 }

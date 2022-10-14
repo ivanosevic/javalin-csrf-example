@@ -4,7 +4,6 @@ import io.javalin.http.Context;
 
 import java.security.SecureRandom;
 import java.util.Base64;
-import java.util.UUID;
 
 /**
  * The CSRF Repository holds and generates the CSRF Tokens in
